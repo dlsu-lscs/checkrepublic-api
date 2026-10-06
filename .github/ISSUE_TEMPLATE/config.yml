@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: check republic project board
+    url: https://github.com/orgs/dlsu-lscs/projects/21
+    about: See what is Ready, In progress and Done before filing a new issue.
