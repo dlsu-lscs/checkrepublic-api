@@ -5,8 +5,8 @@
 # project's built-in workflow: project -> ... -> Workflows -> "Item added to project"
 # -> Status: Ready. Configure that once; it covers every repo feeding the board.
 #
-# Secret ADD_TO_PROJECT_PAT: fine-grained PAT, org permission Projects: read/write,
-# repo permissions Issues: read + Pull requests: read, scoped to this repo.
+# Secret ADD_TO_PROJECT_PAT: classic PAT with the `project` scope only (outside
+# collaborators are not offered the org as a fine-grained resource owner). Expires 2027-10-06.
 name: Add issue to project board
 
 on:
