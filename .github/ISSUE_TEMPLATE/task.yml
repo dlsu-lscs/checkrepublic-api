@@ -1,0 +1,31 @@
+name: Task
+description: Work that is not a bug or a feature (DevOps, chores, docs, research)
+title: "[AREA] "
+type: Task
+projects: ["dlsu-lscs/21"]
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: What needs to be done, in one sentence.
+      placeholder: e.g. "Configure automated project board routing"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope of Work
+      description: Steps or sub-tasks.
+      placeholder: |
+        - [ ] 
+        - [ ] 
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How we know this is done.
+      placeholder: |
+        - [ ] 
+    validations:
+      required: true
