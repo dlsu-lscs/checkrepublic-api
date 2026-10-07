@@ -95,6 +95,7 @@ erDiagram
         string file_url "Accessible storage URL"
         timestamptz created_at
         timestamptz updated_at
+        boolean is_deleted
     }
 
     AUDIT_RUNS {
@@ -201,6 +202,7 @@ Stores metadata and object storage pointers for files uploaded by users (`CR-US-
 | `file_url` | `TEXT` | `NOT NULL` | Accessible storage URL |
 | `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Upload timestamp |
 | `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT NOW()` | Update timestamp |
+| `is_deleted` | `BOOLEAN` | `NOT NULL DEFAULT FALSE` | Soft deletion status flag |
 
 ---
 
