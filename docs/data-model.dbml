@@ -1,0 +1,173 @@
+// Seven-table checklist MVP matching docs/data-model.md.
+// Import into dbdiagram.io; this is not an executable migration.
+Project check_republic {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Pre-Acts/Post-Acts criteria come from repository-maintained Markdown checklists.
+    No database rules/source registry. Runs capture exact checklist editions and
+    uploaded file versions in one input_snapshot. audit_documents explicitly links
+    runs to immutable file versions. JSONB references and coverage
+    require application validation. Guide expansion is deferred.
+    READY is never official DocuLogi approval.
+  '''
+}
+
+Enum audit_type {
+  PRE_ACTS
+  POST_ACTS
+}
+
+Enum audit_status {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+Enum audit_result {
+  READY
+  NEEDS_REVISION
+  BLOCKED
+  INCOMPLETE
+}
+
+Enum form_type {
+  A_FORM
+  PPR
+  AR
+  SAS
+  GALS
+  LOP
+  MOA
+  LOE
+  NE
+  FRS
+  PUBLICITY
+  EVALUATION
+  OTHER
+  UNKNOWN
+}
+
+Enum evaluation_outcome {
+  PASS
+  FAIL
+  NOT_APPLICABLE
+  NOT_EVALUATED
+  NEEDS_MANUAL_REVIEW
+}
+
+Enum finding_severity {
+  BLOCKING
+  WARNING
+  INFO
+}
+
+Table users {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'User ID']
+  google_subject text [not null, unique, note: 'Verified Google subject']
+  email varchar(255) [not null, unique, note: 'Verified institutional email']
+  full_name varchar(255) [not null, note: 'Display name']
+
+  Note: 'Validate Google identity, verified email and institutional eligibility before creating a session.'
+}
+
+Table sessions {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Session ID']
+  user_id uuid [not null, note: 'FK → users.id']
+  refresh_token_hash text [not null, note: 'Hashed refresh credential']
+  expires_at timestamptz [not null, note: 'Server-enforced expiry']
+
+  indexes {
+    user_id
+  }
+
+  Note: 'Delete the session on sign-out. Expired sessions cannot access protected endpoints.'
+}
+
+Table projects {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Package ID']
+  user_id uuid [not null, note: 'FK → users.id; package owner']
+  name varchar(255) [not null, note: 'Required nonempty Project/Event Name']
+  revision bigint [not null, default: 1, note: 'Positive input revision; increment on file/form/name changes']
+
+  indexes {
+    user_id
+  }
+
+  Note: 'One private event package. Resolve all document/run ownership through user_id.'
+}
+
+Table documents {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Immutable uploaded file version']
+  project_id uuid [not null, note: 'FK → projects.id']
+  form_type form_type [not null, default: 'UNKNOWN', note: 'Recognized/confirmed form; UNKNOWN needs confirmation or review']
+  filename text [not null, note: 'Original client filename']
+  mime_type varchar(128) [not null, note: 'Validated PDF/DOCX/XLSX MIME type']
+  size_bytes bigint [not null, note: 'Positive; maximum 25 MB per file']
+  storage_key text [not null, unique, note: 'Private Garage object key']
+  is_deleted boolean [not null, default: false, note: 'Removed/replaced attachment; retain historical object']
+
+  indexes {
+    (project_id, is_deleted)
+  }
+
+  Note: 'Immutable bytes/key. Replacement creates a new row/object and removes the old active attachment. Retain historical objects; metadata changes increment project revision.'
+}
+
+Table audit_runs {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Run ID']
+  project_id uuid [not null, note: 'FK → projects.id']
+  audit_type audit_type [not null, note: 'Selected Pre-Acts or Post-Acts phase']
+  status audit_status [not null, default: 'QUEUED', note: 'Execution lifecycle']
+  input_snapshot jsonb [not null, note: 'Frozen files, checklist edition, project revision/name and applicability context']
+  evaluation_results jsonb [not null, default: `'[]'::jsonb`, note: 'Checklist outcomes/evidence, parser issues and review gaps']
+  overall_result audit_result [null, note: 'Summary only for COMPLETED runs']
+  error_message text [null, note: 'Sanitized fatal error; name failing input where known']
+  created_at timestamptz [not null, default: `now()`, note: 'Queue time']
+  completed_at timestamptz [null, note: 'Terminal time for COMPLETED or FAILED']
+
+  indexes {
+    (project_id, created_at)
+  }
+
+  Note: '''
+    Freeze inputs before queueing under a package lock and consistent transaction. input_snapshot captures project name/revision, exact document versions, checklist filename/hash/text/reviewed items, and applicability context. Workers use captured inputs exclusively. Populate evaluation_results during processing, then freeze terminal results. Validate JSONB item IDs, document references and outcome coverage. Empty coverage cannot yield READY. Add in PostgreSQL: CREATE UNIQUE INDEX audit_runs_one_active_per_project ON audit_runs (project_id) WHERE status IN ('QUEUED', 'PROCESSING'); DBML does not represent that partial index. Retries create separate runs; is_outdated derives from the captured project revision.
+  '''
+}
+
+Table audit_documents {
+  audit_id uuid [not null, note: 'FK → audit_runs.id']
+  document_id uuid [not null, note: 'FK → documents.id; exact file version used']
+
+  indexes {
+    (audit_id, document_id) [pk]
+    document_id
+  }
+
+  Note: 'Immutable run/file membership, created atomically with the run and snapshot. At least one file per run. Validate same-project membership and exact agreement with input_snapshot. Reuse a file version across runs; retain linked records and stored bytes.'
+}
+
+Table audit_findings {
+  id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Finding ID']
+  audit_id uuid [not null, note: 'FK → audit_runs.id']
+  outcome evaluation_outcome [not null, note: 'FAIL, NOT_EVALUATED or NEEDS_MANUAL_REVIEW']
+  severity finding_severity [null, note: 'Reviewed severity for FAIL; null for uncertainty']
+  reason text [not null, note: 'Problem and supporting explanation']
+  recommendation text [not null, note: 'Concrete correction or review action']
+  reference jsonb [null, note: 'Captured checklist filename/hash, section/item ID, triggering scope/context; null for parser/coverage issues']
+  locations jsonb [not null, default: `'[]'::jsonb`, note: 'Affected snapshotted document IDs with section/field and optional reliable positions']
+
+  indexes {
+    audit_id
+  }
+
+  Note: 'Findings correspond to captured checklist evaluations. FAIL requires a reviewed criterion and its allowed severity; uncertainty has null severity. PASS/NOT_APPLICABLE stay in evaluation_results. reference may be null for parser/coverage issues. Validate item/file membership; locations may contain several inputs or none for missing files. Use section fallback when precise positions are unreliable.'
+}
+
+Ref: sessions.user_id > users.id [delete: restrict]
+Ref: projects.user_id > users.id [delete: restrict]
+Ref: documents.project_id > projects.id [delete: restrict]
+Ref: audit_runs.project_id > projects.id [delete: restrict]
+Ref: audit_documents.audit_id > audit_runs.id [delete: restrict]
+Ref: audit_documents.document_id > documents.id [delete: restrict]
+Ref: audit_findings.audit_id > audit_runs.id [delete: restrict]
