@@ -12,7 +12,7 @@ Project check_republic {
   '''
 }
 
-Enum audit_type {
+Enum document_type {
   PRE_ACTS
   POST_ACTS
 }
@@ -100,6 +100,7 @@ Table projects {
 Table documents {
   id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Immutable uploaded file version']
   project_id uuid [not null, note: 'FK → projects.id']
+  document_type document_type [not null, note: 'User-selected PRE_ACTS or POST_ACTS document group; no implicit default']
   form_type form_type [not null, default: 'UNKNOWN', note: 'Recognized/confirmed form; UNKNOWN needs confirmation or review']
   filename text [not null, note: 'Original client filename']
   mime_type varchar(128) [not null, note: 'Validated PDF/DOCX/XLSX MIME type']
@@ -111,15 +112,14 @@ Table documents {
     (project_id, is_deleted)
   }
 
-  Note: 'Immutable bytes/key. Replacement creates a new row/object and removes the old active attachment. Retain historical objects; metadata changes increment project revision.'
+  Note: 'Immutable bytes/key. Replacement creates a new row/object and removes the old active attachment. Retain historical objects; metadata changes, including document_type, increment project revision. Runs preserve the original document labels.'
 }
 
 Table audit_runs {
   id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Run ID']
   project_id uuid [not null, note: 'FK → projects.id']
-  audit_type audit_type [not null, note: 'Selected Pre-Acts or Post-Acts phase']
   status audit_status [not null, default: 'QUEUED', note: 'Execution lifecycle']
-  input_snapshot jsonb [not null, note: 'Frozen files, checklist edition, project revision/name and applicability context']
+  input_snapshot jsonb [not null, note: 'Frozen files with per-document document_type, applicable checklist editions, project revision/name and applicability context']
   evaluation_results jsonb [not null, default: `'[]'::jsonb`, note: 'Checklist outcomes/evidence, parser issues and review gaps']
   overall_result audit_result [null, note: 'Summary only for COMPLETED runs']
   error_message text [null, note: 'Sanitized fatal error; name failing input where known']

@@ -7,7 +7,7 @@ The MVP uses [Pre-Acts](./pre-acts-checklist.md) and [Post-Acts](./post-acts-che
 ## 1. Types and relationships
 
 ```sql
-CREATE TYPE audit_type AS ENUM (
+CREATE TYPE document_type AS ENUM (
     'PRE_ACTS', 'POST_ACTS'
 );
 CREATE TYPE audit_status AS ENUM (
@@ -27,7 +27,7 @@ CREATE TYPE finding_severity AS ENUM (
 );
 ```
 
-Execution status, evaluation outcome, and issue severity have different meanings. JSONB evaluation outcomes use the same vocabulary as `evaluation_outcome`; application validation is required because PostgreSQL does not enforce enums inside JSONB.
+`documents.document_type` is the user's Pre-Acts/Post-Acts selection for each file; `form_type` identifies A-Form, PPR, AR, and other forms. Execution status, evaluation outcome, and issue severity have different meanings. JSONB evaluation outcomes use the same vocabulary as `evaluation_outcome`; application validation is required because PostgreSQL does not enforce enums inside JSONB.
 
 ```mermaid
 erDiagram
@@ -73,16 +73,17 @@ UUID primary keys default to `gen_random_uuid()`. All fields are required unless
 
 ### `documents`
 
-| Column        | Type / constraints                               | Purpose                                                         |
-| :------------ | :----------------------------------------------- | :-------------------------------------------------------------- |
-| `id`          | `uuid`; pk, not null, default: gen_random_uuid() | Immutable uploaded file version                                 |
-| `project_id`  | `uuid`; not null                                 | FK → projects.id                                                |
-| `form_type`   | `form_type`; not null, default: 'UNKNOWN'        | Recognized/confirmed form; UNKNOWN needs confirmation or review |
-| `filename`    | `text`; not null                                 | Original client filename                                        |
-| `mime_type`   | `varchar(128)`; not null                         | Validated PDF/DOCX/XLSX MIME type                               |
-| `size_bytes`  | `bigint`; not null                               | Positive; maximum 25 MB per file                                |
-| `storage_key` | `text`; not null, unique                         | Private Garage object key                                       |
-| `is_deleted`  | `boolean`; not null, default: false              | Removed/replaced attachment; retain historical object           |
+| Column          | Type / constraints                               | Purpose                                                         |
+| :-------------- | :----------------------------------------------- | :-------------------------------------------------------------- |
+| `id`            | `uuid`; pk, not null, default: gen_random_uuid() | Immutable uploaded file version                                 |
+| `project_id`    | `uuid`; not null                                 | FK → projects.id                                                |
+| `document_type` | `document_type`; not null                        | User-selected PRE_ACTS or POST_ACTS document group              |
+| `form_type`     | `form_type`; not null, default: 'UNKNOWN'        | Recognized/confirmed form; UNKNOWN needs confirmation or review |
+| `filename`      | `text`; not null                                 | Original client filename                                        |
+| `mime_type`     | `varchar(128)`; not null                         | Validated PDF/DOCX/XLSX MIME type                               |
+| `size_bytes`    | `bigint`; not null                               | Positive; maximum 25 MB per file                                |
+| `storage_key`   | `text`; not null, unique                         | Private Garage object key                                       |
+| `is_deleted`    | `boolean`; not null, default: false              | Removed/replaced attachment; retain historical object           |
 
 ### `audit_runs`
 
@@ -90,7 +91,6 @@ UUID primary keys default to `gen_random_uuid()`. All fields are required unless
 | :------------------- | :----------------------------------------------- | :------------------------------------------------------------------------------- |
 | `id`                 | `uuid`; pk, not null, default: gen_random_uuid() | Run ID                                                                           |
 | `project_id`         | `uuid`; not null                                 | FK → projects.id                                                                 |
-| `audit_type`         | `audit_type`; not null                           | Selected Pre-Acts or Post-Acts phase                                             |
 | `status`             | `audit_status`; not null, default: 'QUEUED'      | Execution lifecycle                                                              |
 | `input_snapshot`     | `jsonb`; not null                                | Frozen files, checklist edition, project revision/name and applicability context |
 | `evaluation_results` | `jsonb`; not null, default: '[]'::jsonb          | Checklist outcomes/evidence, parser issues and review gaps                       |
@@ -136,8 +136,8 @@ WHERE status IN ('QUEUED', 'PROCESSING');
 **`input_snapshot` preserves what the run checked.** It contains:
 
 - The project name and revision at start.
-- Exact document IDs, immutable storage keys, filenames, and form types.
-- The selected checklist filename, content hash, captured text, and reviewed item identities/applicability/severity used for evaluation.
+- Exact document IDs, immutable storage keys, filenames, form types, and per-document `document_type` selections.
+- The applicable checklist filename(s), content hashes, captured text, and reviewed item identities/applicability/severity used for evaluation.
 - Confirmed or unknown applicability and approval evidence used by this run, with review gaps where necessary.
 
 Checklist item IDs identify requirements within a captured edition; filename/hash plus section/item identifies the version. Scope is recorded as global, form-specific, or cross-document in the captured criteria and finding reference. No rules table, source registry, publishing workflow, or evaluator registry is needed.
@@ -154,12 +154,12 @@ JSONB structure, item identity, same-project link membership, snapshot/link cons
 
 ## 4. Audit flow and lifecycle
 
-**Project → documents → select audit phase → Run Audit → capture inputs → parse → evaluate checklist → save findings → results.**
+**Project → upload documents and mark each Pre-Acts/Post-Acts → Run Audit → capture inputs → parse → evaluate applicable checklists → save findings → results.**
 
 1. Verify Google identity, verified email, and institutional hosted-domain/eligibility policy; an email suffix alone is insufficient. Establish an expiring session. Sign-out deletes the session, and every protected request checks it server-side.
-2. Create an owner-scoped project with a required event name. Validate PDF/DOCX/XLSX uploads independently, with a 25 MB per-file limit. Invalid uploads preserve valid attachments. Ambiguous form types remain UNKNOWN pending confirmation or review.
-3. Upload/replacement/removal never starts an audit. Replacement creates a new row/object and marks the old attachment deleted atomically. Bytes and storage keys are immutable; retain objects referenced by historical snapshots. Package name, attachment, or form-type changes increment revision. Authorize access before generating short-lived storage URLs.
-4. Explicitly select PRE_ACTS or POST_ACTS and start a run with at least one valid document. Select the corresponding checklist and include every applicable criterion, including required-file checks when files are absent. Retrieved context must not silently omit mandatory checks.
+2. Create an owner-scoped project with a required event name. For each uploaded document, the user selects PRE_ACTS or POST_ACTS; this selection is required and has no implicit default. Validate PDF/DOCX/XLSX uploads independently, with a 25 MB per-file limit. Invalid uploads preserve valid attachments. Ambiguous form types remain UNKNOWN pending confirmation or review.
+3. Upload/replacement/removal never starts an audit. Replacement creates a new row/object and marks the old attachment deleted atomically. Bytes and storage keys are immutable; retain objects referenced by historical snapshots. Package name, attachment, form-type, or document audit-type changes increment revision. Authorize access before generating short-lived storage URLs.
+4. Explicitly start a run with at least one valid document. There is no separate run-level audit-type selection. Select applicable checklist criteria from the linked documents' PRE_ACTS/POST_ACTS labels; a mixed package can include both groups. Keep approved Pre-Acts reference files labeled PRE_ACTS when using them for Post-Acts comparisons, and require approval evidence for those comparisons. Include required-file checks for the represented groups even when a required file is absent. Retrieved context must not silently omit mandatory checks.
 5. Capture inputs, then transition QUEUED → PROCESSING. Resolve conditions against extractable or confirmed evidence: confirmed false → NOT_APPLICABLE; unknown → NEEDS_MANUAL_REVIEW; unreliable/unsupported evidence → NOT_EVALUATED or NEEDS_MANUAL_REVIEW.
 6. Use deterministic checks for readable fields, comparisons, presence, duplicates, and reviewed counting policies. LLM/RAG assistance interprets evidence and proposes explanations using captured criteria. Uploaded text is untrusted evidence and cannot alter instructions. Validate outcomes, severity, evidence, and references before saving.
 7. Save evaluations and findings, then finish COMPLETED or FAILED. Recoverable parser errors produce explicit unevaluated outcomes; fatal errors populate a sanitized error message and identify the failing input where possible. Preserve the package. Retry/re-audit creates a separate run from current inputs without requiring re-upload.
@@ -167,7 +167,7 @@ JSONB structure, item identity, same-project link membership, snapshot/link cons
 
 Completed summary precedence: reviewed blocking failure → BLOCKED; other actionable failure → NEEDS_REVISION; unresolved coverage/manual review → INCOMPLETE; otherwise READY. Informational observations alone do not prevent READY. Return uncertainty alongside any summary. FAILED runs have no readiness result, and READY never means official DocuLogi approval.
 
-The proposed package-level upload/download, audit creation, history, and detail interfaces remain the same. Run detail exposes the lifecycle/error, evaluation coverage, findings, captured references, locations, and outdated status. Inspector previews support hover, focus, click, and tap; reliable source anchors are optional and source permissions still apply.
+The proposed package-level upload/download, audit creation, history, and detail routes remain the same. Upload/document metadata updates carry `document_type`; run creation no longer takes it. Run detail/history derives the represented groups from frozen document labels and exposes the lifecycle/error, evaluation coverage, findings, captured references, locations, and outdated status. Inspector previews support hover, focus, click, and tap; reliable source anchors are optional and source permissions still apply.
 
 ## 5. Checklist boundaries and acceptance checks
 
@@ -180,6 +180,7 @@ The checklists include specialized and termlong activities beyond the current st
 - **CR-US-04:** real checklist versions/item identities, corrections, multi-document and missing-file findings, accessible previews, reliable highlights and section fallbacks.
 - **CR-US-07:** manual starts, one active run, fixed inputs despite file/checklist changes, error/retry without re-upload, outdated results, and immutable history.
 - Link one file version to multiple runs and several files to one run; reject duplicate pairs and cross-project links. Snapshot membership must match the links, and replacing a file must preserve prior links and stored bytes.
+- Require each document's PRE_ACTS/POST_ACTS selection; support mixed packages and Pre-Acts references for Post-Acts comparisons. Changing a label increments revision and does not alter the labels captured by an existing run.
 - Validate JSONB references, outcomes, reviewed severity, and complete checklist coverage. Unknown or unsupported evidence must not produce fabricated failures or READY results.
 
 This change updates documentation only. Database rules/source tables, publishing/approval management, extra owner fields, model/pipeline metadata, separate snapshots, retry links, and extra timestamps are omitted. It adds no migrations, application code, vector tables, guide expansion, document builder, or external submission.
