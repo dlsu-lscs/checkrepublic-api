@@ -1,0 +1,53 @@
+# CI for checkrepublic-api (#23). Runs the gitleaks secret scan over the whole git history.
+# Install, lint, build and test are written out but stay commented out, as the ticket asks:
+# uncomment them (with the cache line) to turn them on.
+name: CI
+
+on:
+  workflow_dispatch:
+  # Manual runs only for now. Uncomment to also run on pushes and pull requests.
+  # push:
+  #   branches: [main, development]
+  # pull_request:
+  #   branches: [main, development]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # every branch and commit, so the secret scan sees the full history
+
+      # gitleaks CLI, pinned and checksum-verified. No license key needed (gitleaks-action needs one on org repos).
+      # --redact keeps any finding's value out of the log, which is public on this repo.
+      - name: Secret scan (gitleaks)
+        run: |
+          version=8.30.1
+          sha256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz"
+          echo "${sha256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --redact --verbose .
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          # cache: npm
+
+      # - name: Install
+      #   run: npm ci
+
+      # - name: Lint
+      #   run: npm run lint
+
+      # - name: Build
+      #   run: npm run build
+
+      # - name: Test
+      #   run: npm test
