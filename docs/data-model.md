@@ -102,6 +102,8 @@ Groups all documents for one event, including Pre-Acts and Post-Acts files. `rev
 | `id`       | `uuid`; pk, not null, default: gen_random_uuid() | Package ID                                                                                 |
 | `user_id`  | `uuid`; not null                                 | FK → users.id; package owner                                                               |
 | `name`     | `varchar(255)`; not null                         | Required nonempty Project/Event Name                                                       |
+| `created_at` | `timestamptz`; not null, default: now() | Project creation time |
+| `modified_at` | `timestamptz`; not null, default: now() | Last project row change; maintained by Prisma @updatedAt |
 | `revision` | `bigint`; not null, default: 1                   | Positive input revision; increment on name, attachment, document_type or form_type changes |
 
 ### `documents`
