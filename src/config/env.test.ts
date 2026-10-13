@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateEnv } from './env';
+import { validateEnv } from '@/config/env';
 
 const DATABASE_URL = 'postgresql://postgres:test@localhost:5432/checkrepublic_test';
 
