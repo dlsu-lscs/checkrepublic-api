@@ -20,14 +20,22 @@ describe('Projects dependency injection', () => {
 
   it('injects the shared Prisma client through the repository into the service', async () => {
     const prisma = createTestPrisma();
-    const project = { id: 'project-id', userId: 'user-id', name: 'Test event' };
+    const project = {
+      id: 'project-id',
+      userId: 'user-id',
+      name: 'Test event',
+      createdAt: new Date('2026-10-13T00:00:00Z'),
+      modifiedAt: new Date('2026-10-13T00:00:00Z'),
+    };
     const create = vi.spyOn(prisma.project, 'create').mockResolvedValue(project);
     const app = await buildApp({ logger: false, prisma });
     apps.push(app);
 
-    expect(await app.projectsService.create({ name: project.name }, project.userId)).toEqual(
-      project,
-    );
+    expect(await app.projectsService.create({ name: project.name }, project.userId)).toEqual({
+      ...project,
+      createdAt: project.createdAt.toISOString(),
+      modifiedAt: project.modifiedAt.toISOString(),
+    });
     expect(create).toHaveBeenCalledExactlyOnceWith({
       data: { name: project.name, user: { connect: { id: project.userId } } },
     });
@@ -54,7 +62,13 @@ describe('Projects dependency injection', () => {
   it('creates separate services and repositories for separate app instances', async () => {
     const firstPrisma = createTestPrisma();
     const secondPrisma = createTestPrisma();
-    const project = { id: 'project-id', userId: 'user-id', name: 'Test event' };
+    const project = {
+      id: 'project-id',
+      userId: 'user-id',
+      name: 'Test event',
+      createdAt: new Date('2026-10-13T00:00:00Z'),
+      modifiedAt: new Date('2026-10-13T00:00:00Z'),
+    };
     const firstCreate = vi.spyOn(firstPrisma.project, 'create').mockResolvedValue(project);
     const secondCreate = vi.spyOn(secondPrisma.project, 'create').mockResolvedValue(project);
     const first = await buildApp({ logger: false, prisma: firstPrisma });

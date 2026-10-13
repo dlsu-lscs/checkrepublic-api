@@ -17,6 +17,8 @@ export const projectResponseSchema = z.object({
   id: z.uuid(),
   userId: z.uuid(),
   name: z.string().min(1).max(255),
+  createdAt: z.iso.datetime(),
+  modifiedAt: z.iso.datetime(),
 });
 
 export type ProjectResponse = z.infer<typeof projectResponseSchema>;

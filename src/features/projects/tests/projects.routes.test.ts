@@ -29,7 +29,13 @@ describe('POST /api/projects', () => {
   it('creates a project with the supplied owner and a trimmed name', async () => {
     const userId = randomUUID();
     const prisma = await setup();
-    const project = { id: randomUUID(), userId, name: 'Test event' };
+    const project = {
+      id: randomUUID(),
+      userId,
+      name: 'Test event',
+      createdAt: new Date('2026-10-13T00:00:00Z'),
+      modifiedAt: new Date('2026-10-13T00:00:00Z'),
+    };
     const create = vi.spyOn(prisma.project, 'create').mockResolvedValue(project);
 
     const response = await app!.inject({
@@ -38,7 +44,11 @@ describe('POST /api/projects', () => {
       payload: { name: '  Test event  ', userId },
     });
     expect(response.statusCode).toBe(201);
-    expect(projectResponseSchema.parse(response.json())).toEqual(project);
+    expect(projectResponseSchema.parse(response.json())).toEqual({
+      ...project,
+      createdAt: project.createdAt.toISOString(),
+      modifiedAt: project.modifiedAt.toISOString(),
+    });
     expect(create).toHaveBeenCalledExactlyOnceWith({
       data: { name: 'Test event', user: { connect: { id: userId } } },
     });

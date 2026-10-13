@@ -8,7 +8,12 @@ export class ProjectsService {
 
   async create(data: CreateProjectInput, userId: string): Promise<ProjectResponse> {
     try {
-      return await this.repository.create(data, userId);
+      const project = await this.repository.create(data, userId);
+      return {
+        ...project,
+        createdAt: project.createdAt.toISOString(),
+        modifiedAt: project.modifiedAt.toISOString(),
+      };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         throw new NotFoundError('User not found');
