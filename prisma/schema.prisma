@@ -1,0 +1,172 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/shared/database/generated"
+  moduleFormat    = "esm"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Source of truth: docs/data-model.dbml.
+// Workflow and JSONB invariants described there require application validation.
+
+enum DocumentType {
+  PRE_ACTS
+  POST_ACTS
+
+  @@map("document_type")
+}
+
+enum AuditStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+
+  @@map("audit_status")
+}
+
+enum AuditResult {
+  READY
+  NEEDS_REVISION
+  BLOCKED
+  INCOMPLETE
+
+  @@map("audit_result")
+}
+
+enum FormType {
+  A_FORM
+  PPR
+  AR
+  SAS
+  GALS
+  LOP
+  MOA
+  LOE
+  NE
+  FRS
+  PUBLICITY
+  EVALUATION
+  OTHER
+  UNKNOWN
+
+  @@map("form_type")
+}
+
+enum EvaluationOutcome {
+  PASS
+  FAIL
+  NOT_APPLICABLE
+  NOT_EVALUATED
+  NEEDS_MANUAL_REVIEW
+
+  @@map("evaluation_outcome")
+}
+
+enum FindingSeverity {
+  BLOCKING
+  WARNING
+  INFO
+
+  @@map("finding_severity")
+}
+
+model User {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  googleSubject String    @unique @map("google_subject") @db.Text
+  email         String    @unique @db.VarChar(255)
+  fullName      String    @map("full_name") @db.VarChar(255)
+  sessions      Session[]
+  projects      Project[]
+
+  @@map("users")
+}
+
+model Session {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  refreshTokenHash String   @map("refresh_token_hash") @db.Text
+  expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Project {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @map("user_id") @db.Uuid
+  name      String     @db.VarChar(255)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  documents Document[]
+  auditRuns AuditRun[]
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Document {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId      String          @map("project_id") @db.Uuid
+  documentType   DocumentType    @map("document_type")
+  formType       FormType        @default(UNKNOWN) @map("form_type")
+  filename       String          @db.Text
+  mimeType       String          @map("mime_type") @db.VarChar(128)
+  sizeBytes      BigInt          @map("size_bytes") @db.BigInt
+  storageKey     String          @unique @map("storage_key") @db.Text
+  isDeleted      Boolean         @default(false) @map("is_deleted")
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  auditDocuments AuditDocument[]
+
+  @@index([projectId, isDeleted])
+  @@map("documents")
+}
+
+model AuditRun {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId         String          @map("project_id") @db.Uuid
+  status            AuditStatus     @default(QUEUED)
+  inputSnapshot     Json            @map("input_snapshot") @db.JsonB
+  evaluationResults Json            @default("[]") @map("evaluation_results") @db.JsonB
+  overallResult     AuditResult?    @map("overall_result")
+  errorMessage      String?         @map("error_message") @db.Text
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt       DateTime?       @map("completed_at") @db.Timestamptz(6)
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  auditDocuments    AuditDocument[]
+  findings          AuditFinding[]
+
+  // PostgreSQL-normalized form of status IN ('QUEUED', 'PROCESSING').
+  @@unique([projectId], map: "audit_runs_one_active_per_project", where: raw("(status = ANY (ARRAY['QUEUED'::audit_status, 'PROCESSING'::audit_status]))"))
+  @@index([projectId, createdAt])
+  @@map("audit_runs")
+}
+
+model AuditDocument {
+  auditId    String   @map("audit_id") @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  audit      AuditRun @relation(fields: [auditId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([auditId, documentId])
+  @@index([documentId])
+  @@map("audit_documents")
+}
+
+model AuditFinding {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auditId        String            @map("audit_id") @db.Uuid
+  outcome        EvaluationOutcome
+  severity       FindingSeverity?
+  reason         String            @db.Text
+  recommendation String            @db.Text
+  reference      Json?             @db.JsonB
+  locations      Json              @default("[]") @db.JsonB
+  audit          AuditRun          @relation(fields: [auditId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([auditId])
+  @@map("audit_findings")
+}

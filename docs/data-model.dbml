@@ -88,7 +88,6 @@ Table projects {
   id uuid [pk, not null, default: `gen_random_uuid()`, note: 'Package ID']
   user_id uuid [not null, note: 'FK → users.id; package owner']
   name varchar(255) [not null, note: 'Required nonempty Project/Event Name']
-  revision bigint [not null, default: 1, note: 'Positive input revision; increment on file/form/name changes']
 
   indexes {
     user_id
