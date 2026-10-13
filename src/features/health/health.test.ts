@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '@/app';
-import { HealthService } from './health.service';
+import { HealthService } from '@/features/health/health.service';
 import { PrismaService } from '@/shared/database/prisma.service';
 
 describe('Health Feature Slice', () => {
@@ -18,7 +18,7 @@ describe('Health Feature Slice', () => {
     });
   });
 
-  describe('GET /health (Integration)', () => {
+  describe('GET /api/health (Integration)', () => {
     let app: FastifyInstance;
 
     beforeAll(async () => {
@@ -36,7 +36,7 @@ describe('Health Feature Slice', () => {
     it('should return 200 with service health payload', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(200);

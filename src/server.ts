@@ -41,8 +41,10 @@ async function bootstrap(): Promise<void> {
 
   try {
     await app.listen({ port: env.PORT, host: env.HOST });
-    app.log.info(`Server running at http://${env.HOST}:${env.PORT}`);
-    app.log.info(`Swagger documentation available at http://${env.HOST}:${env.PORT}/documentation`);
+    const displayHost = env.HOST === '0.0.0.0' ? 'localhost' : env.HOST;
+    const baseUrl = `http://${displayHost}:${env.PORT}`;
+    app.log.info(`Server running at ${baseUrl}`);
+    app.log.info(`Swagger documentation available at ${baseUrl}/documentation`);
   } catch (err) {
     app.log.fatal(err, 'Failed to start server');
     process.exit(1);

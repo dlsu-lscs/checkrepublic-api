@@ -2,7 +2,7 @@ import fastify, { type FastifyInstance } from 'fastify';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '@/app';
 import { PrismaService } from '@/shared/database/prisma.service';
-import { prismaPlugin } from './prisma';
+import { prismaPlugin } from '@/plugins/prisma';
 
 function createTestService() {
   const prisma = new PrismaService('postgresql://postgres:test@localhost:5432/test');
@@ -61,7 +61,7 @@ describe('Shared Prisma plugin', () => {
     app = await buildApp({ logger: false, prisma });
     expect(app.prisma).toBe(prisma);
     expect(prisma.$connect).toHaveBeenCalledOnce();
-    expect((await app.inject('/health')).statusCode).toBe(200);
+    expect((await app.inject('/api/health')).statusCode).toBe(200);
 
     await app.close();
     expect(prisma.$disconnect).toHaveBeenCalledOnce();

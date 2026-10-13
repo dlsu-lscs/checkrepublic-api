@@ -2,6 +2,8 @@
 
 Fastify API with Prisma and PostgreSQL.
 
+API prefix: `/api`.
+
 Copy `.env.example` to `.env` and configure the database credentials and `DATABASE_URL`.
 
 ```sh
