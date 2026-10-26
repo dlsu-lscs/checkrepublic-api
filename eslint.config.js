@@ -16,6 +16,13 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.ts', '*.config.js'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'src/shared/database/generated/**',
+      '*.config.ts',
+      '*.config.js',
+    ],
   },
 );

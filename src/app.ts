@@ -5,14 +5,16 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { env } from '@/config/env';
-import { registerPlugins } from '@/plugins';
-import { registerFeatures } from '@/features';
-import { globalErrorHandler } from '@/shared/errors';
-import { errorResponse } from '@/shared/utils';
+import { registerPlugins } from '@/plugins/register';
+import type { PrismaPluginOptions } from '@/plugins/prisma';
+import { registerFeatures } from '@/features/register';
+import { globalErrorHandler } from '@/shared/errors/error-handler';
+import { errorResponse } from '@/shared/utils/response';
 
-export type BuildAppOptions = FastifyServerOptions;
+export type BuildAppOptions = FastifyServerOptions & PrismaPluginOptions;
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
+  const { prisma, ...serverOptions } = options;
   const isDev = env.NODE_ENV === 'development';
   const isTest = env.NODE_ENV === 'test';
 
@@ -36,7 +38,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   const app = fastify({
     logger: options.logger ?? defaultLogger,
-    ...options,
+    ...serverOptions,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -58,8 +60,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       );
   });
 
-  await app.register(registerPlugins);
-  await app.register(registerFeatures);
+  try {
+    await app.register(registerPlugins, { prisma });
+    await app.register(registerFeatures);
+  } catch (error) {
+    await app.close();
+    throw error;
+  }
 
   return app;
 }

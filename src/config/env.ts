@@ -9,6 +9,12 @@ export const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   CORS_ORIGIN: z.string().default('*'),
+  DATABASE_URL: z
+    .url()
+    .refine(
+      (value) => /^postgres(?:ql)?:\/\//i.test(value),
+      'DATABASE_URL must be a PostgreSQL connection URL',
+    ),
 });
 
 export type Env = z.infer<typeof envSchema>;
