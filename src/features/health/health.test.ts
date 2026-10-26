@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '@/app';
-import { HealthService } from './health.service';
+import { HealthService } from '@/features/health/health.service';
+import { PrismaService } from '@/shared/database/prisma.service';
 
 describe('Health Feature Slice', () => {
   describe('HealthService', () => {
@@ -17,11 +18,14 @@ describe('Health Feature Slice', () => {
     });
   });
 
-  describe('GET /health (Integration)', () => {
+  describe('GET /api/health (Integration)', () => {
     let app: FastifyInstance;
 
     beforeAll(async () => {
-      app = await buildApp();
+      const prisma = new PrismaService('postgresql://postgres:test@localhost:5432/test');
+      vi.spyOn(prisma, '$connect').mockResolvedValue();
+      vi.spyOn(prisma, '$disconnect').mockResolvedValue();
+      app = await buildApp({ prisma });
       await app.ready();
     });
 
@@ -32,7 +36,7 @@ describe('Health Feature Slice', () => {
     it('should return 200 with service health payload', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/health',
+        url: '/api/health',
       });
 
       expect(response.statusCode).toBe(200);
