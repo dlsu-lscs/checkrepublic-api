@@ -4,7 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build && npm prune --omit=dev
+# --omit=optional too: @prisma/client lists prisma and typescript as optional peers, which --omit=dev alone keeps
+RUN npm run build && npm prune --omit=dev --omit=optional
 
 # Runtime stage: production dependencies and dist/ only
 FROM node:24-alpine AS runner
