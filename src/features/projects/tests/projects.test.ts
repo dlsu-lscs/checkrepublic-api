@@ -37,7 +37,7 @@ describe('Projects dependency injection', () => {
       modifiedAt: project.modifiedAt.toISOString(),
     });
     expect(create).toHaveBeenCalledExactlyOnceWith({
-      data: { name: project.name, user: { connect: { id: project.userId } } },
+      data: { name: project.name, userId: project.userId },
     });
 
     await app.register(async (feature) => {

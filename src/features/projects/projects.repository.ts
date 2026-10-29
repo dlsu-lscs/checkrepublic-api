@@ -7,12 +7,8 @@ export class ProjectsRepository {
   async create(data: CreateProjectInput, userId: string) {
     return this.prisma.project.create({
       data: {
-        ...data,
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
+        name: data.name,
+        userId: userId,
       },
     });
   }
