@@ -2,10 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { validateEnv } from '@/config/env';
 
 const DATABASE_URL = 'postgresql://postgres:test@localhost:5432/checkrepublic_test';
+const requiredEnv = {
+  DATABASE_URL,
+  S3_ENDPOINT: 'http://storage.test',
+  S3_REGION: 'garage',
+  S3_ACCESS_KEY_ID: 'test-access-key',
+  S3_SECRET_ACCESS_KEY: 'test-secret-key',
+  S3_BUCKET: 'test-documents',
+};
 
 describe('Config / Environment Validation', () => {
   it('should validate and parse valid environment variables', () => {
     const validConfig = validateEnv({
+      ...requiredEnv,
       NODE_ENV: 'test',
       PORT: '4000',
       HOST: '127.0.0.1',
@@ -23,7 +32,7 @@ describe('Config / Environment Validation', () => {
   });
 
   it('should use default values when optional environment variables are missing', () => {
-    const config = validateEnv({ DATABASE_URL });
+    const config = validateEnv(requiredEnv);
 
     expect(config.NODE_ENV).toBe('development');
     expect(config.PORT).toBe(3000);
@@ -34,25 +43,27 @@ describe('Config / Environment Validation', () => {
 
   it('should throw an explicit error on invalid NODE_ENV', () => {
     expect(() => {
-      validateEnv({ NODE_ENV: 'invalid-env', DATABASE_URL });
+      validateEnv({ ...requiredEnv, NODE_ENV: 'invalid-env' });
     }).toThrow('[Config Error] Invalid or missing environment configuration');
   });
 
   it('should throw an explicit error on invalid PORT value', () => {
     expect(() => {
-      validateEnv({ PORT: '999999', DATABASE_URL });
+      validateEnv({ ...requiredEnv, PORT: '999999' });
     }).toThrow('[Config Error] Invalid or missing environment configuration');
   });
 
   it.each([undefined, '', 'invalid-url', 'https://localhost/database', 'mysql://localhost/db'])(
     'rejects a missing or invalid database URL: %s',
     (databaseUrl) => {
-      expect(() => validateEnv({ DATABASE_URL: databaseUrl })).toThrow('DATABASE_URL');
+      expect(() => validateEnv({ ...requiredEnv, DATABASE_URL: databaseUrl })).toThrow(
+        'DATABASE_URL',
+      );
     },
   );
 
   it('accepts the postgres URL scheme', () => {
     const url = 'postgres://postgres:test@localhost:5432/checkrepublic_test';
-    expect(validateEnv({ DATABASE_URL: url }).DATABASE_URL).toBe(url);
+    expect(validateEnv({ ...requiredEnv, DATABASE_URL: url }).DATABASE_URL).toBe(url);
   });
 });

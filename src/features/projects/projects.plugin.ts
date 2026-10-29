@@ -11,7 +11,7 @@ declare module 'fastify' {
 export const projectsPlugin = fp(
   async (app) => {
     const repository = new ProjectsRepository(app.prisma);
-    const service = new ProjectsService(repository);
+    const service = new ProjectsService(repository, app.log.child({ service: 'ProjectsService' }));
 
     app.decorate('projectsService', service);
   },
