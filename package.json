@@ -21,6 +21,8 @@
     "pretest:integration": "prisma generate",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "prisma:generate": "prisma generate",
+    "preprisma:seed": "prisma generate",
+    "prisma:seed": "prisma db seed",
     "prisma:validate": "prisma validate",
     "prisma:format": "prisma format",
     "prisma:migrate": "prisma migrate dev",

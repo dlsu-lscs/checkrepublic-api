@@ -14,6 +14,10 @@ npx prisma generate
 npm run dev
 ```
 
+For sample development data, run `npm run prisma:seed` after applying migrations.
+It creates 10 users and 20 linked projects, prints their IDs, and can be rerun without
+creating duplicates.
+
 Stop PostgreSQL (keeps database data):
 
 ```sh

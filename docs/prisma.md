@@ -30,6 +30,7 @@ does not change existing PostgreSQL roles or databases.
 | `npm run prisma:format` | Format `prisma/schema.prisma`. |
 | `npm run prisma:validate` | Validate the schema and configuration. |
 | `npm run prisma:generate` | Generate the typed client; does not create database tables. |
+| `npm run prisma:seed` | Generate the client and seed 10 development users and 20 projects. |
 | `npm run prisma:migrate -- --name add_example` | Create and apply a migration on a development database. |
 | `npm run prisma:migrate -- --name add_example --create-only` | Create a draft SQL migration for review/customization before applying it. |
 | `npm run prisma:deploy` | Apply committed pending migrations; use on deployment and fresh checkouts. |
@@ -42,6 +43,21 @@ does not change existing PostgreSQL roles or databases.
 
 `npm run dev`, `npm run build`, and the test scripts generate the client
 automatically. After changing the schema, always generate again to refresh types.
+
+## Development seed
+
+After applying migrations, run:
+
+```sh
+npm run prisma:seed
+```
+
+This creates 10 development users (`dev@dlsu.edu.ph`, then `dev2@dlsu.edu.ph` through
+`dev10@dlsu.edu.ph`) and 20 projects, with two projects per user, in the database
+configured by `DATABASE_URL`. The command prints their IDs for use in API requests.
+Upserts reuse existing records without overwriting them, so rerunning the command
+does not create duplicates. The original single user and project are reused if
+already seeded. All records are seeded in one transaction.
 
 ## Changing the schema
 
