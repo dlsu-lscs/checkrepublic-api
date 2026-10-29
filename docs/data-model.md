@@ -122,6 +122,7 @@ File bytes and `storage_key` are immutable. Replacing a file creates a new row/o
 | `mime_type`     | `varchar(128)`; not null                         | Validated PDF/DOCX/XLSX MIME type                               |
 | `size_bytes`    | `bigint`; not null                               | Positive; maximum 25 MB per file                                |
 | `storage_key`   | `text`; not null, unique                         | Private Garage object key                                       |
+| `uploaded_at`   | `timestamptz`; not null, default: now()           | Database timestamp when the document record was created          |
 | `is_deleted`    | `boolean`; not null, default: false              | Removed/replaced attachment; retain historical object           |
 
 ### `audit_runs`

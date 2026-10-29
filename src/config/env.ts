@@ -9,6 +9,13 @@ export const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   CORS_ORIGIN: z.string().default('*'),
+  S3_ENDPOINT: z
+    .url()
+    .refine((value) => /^https?:\/\//i.test(value), 'S3_ENDPOINT must use HTTP or HTTPS'),
+  S3_REGION: z.string().min(1),
+  S3_ACCESS_KEY_ID: z.string().min(1),
+  S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_BUCKET: z.string().min(1),
   DATABASE_URL: z
     .url()
     .refine(

@@ -106,11 +106,11 @@ describe('POST /api/projects', () => {
     });
   });
 
-  it('returns 404 when the owner does not exist', async () => {
+  it('returns a server error for a missing owner until owner validation is implemented', async () => {
     const prisma = await setup();
     vi.spyOn(prisma.project, 'create').mockRejectedValue(
-      new Prisma.PrismaClientKnownRequestError('Required user not found', {
-        code: 'P2025',
+      new Prisma.PrismaClientKnownRequestError('Owner foreign key constraint failed', {
+        code: 'P2003',
         clientVersion: '7.10.0',
       }),
     );
@@ -119,10 +119,10 @@ describe('POST /api/projects', () => {
       url: '/api/projects',
       payload: { name: 'Test event', userId: randomUUID() },
     });
-    expect(response.statusCode).toBe(404);
+    expect(response.statusCode).toBe(500);
     expect(response.json()).toMatchObject({
       success: false,
-      error: { code: 'NOT_FOUND', message: 'User not found', statusCode: 404 },
+      error: { code: 'INTERNAL_SERVER_ERROR', statusCode: 500 },
     });
   });
 

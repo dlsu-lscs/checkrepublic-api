@@ -119,6 +119,7 @@ model Document {
   mimeType       String          @map("mime_type") @db.VarChar(128)
   sizeBytes      BigInt          @map("size_bytes") @db.BigInt
   storageKey     String          @unique @map("storage_key") @db.Text
+  uploadedAt     DateTime        @default(now()) @map("uploaded_at") @db.Timestamptz(6)
   isDeleted      Boolean         @default(false) @map("is_deleted")
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   auditDocuments AuditDocument[]

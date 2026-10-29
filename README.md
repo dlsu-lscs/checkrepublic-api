@@ -34,3 +34,6 @@ npm run lint
 ```
 
 See [Prisma commands and migrations](docs/prisma.md).
+
+See [document uploads and signed download URLs](docs/documents.md) for the upload
+request, Garage configuration, and retrieval endpoint.

@@ -31,11 +31,9 @@ describe('Projects dependency injection', () => {
     const app = await buildApp({ logger: false, prisma });
     apps.push(app);
 
-    expect(await app.projectsService.create({ name: project.name }, project.userId)).toEqual({
-      ...project,
-      createdAt: project.createdAt.toISOString(),
-      modifiedAt: project.modifiedAt.toISOString(),
-    });
+    expect(await app.projectsService.create({ name: project.name }, project.userId)).toEqual(
+      project,
+    );
     expect(create).toHaveBeenCalledExactlyOnceWith({
       data: { name: project.name, userId: project.userId },
     });

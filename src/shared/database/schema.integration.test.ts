@@ -93,6 +93,7 @@ describe('DBML schema with PostgreSQL', () => {
       expect(loaded.sessions[0].expiresAt).toEqual(expiresAt);
       const loadedProject = loaded.projects[0];
       expect(loadedProject.id).toBe(project.id);
+      expect(loadedProject.documents[0].uploadedAt).toBeInstanceOf(Date);
       expect(loadedProject.documents[0]).toMatchObject({
         id: document.id,
         sizeBytes: 1024n,

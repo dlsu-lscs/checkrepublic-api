@@ -47,8 +47,11 @@
   },
   "homepage": "https://github.com/dlsu-lscs/checkrepublic-api#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1159.0",
+    "@aws-sdk/s3-request-presigner": "^3.1159.0",
     "@fastify/cors": "^11.3.0",
     "@fastify/helmet": "^13.1.1",
+    "@fastify/multipart": "^10.1.6",
     "@fastify/sensible": "^6.0.6",
     "@fastify/swagger": "^9.9.1",
     "@fastify/swagger-ui": "^6.1.1",

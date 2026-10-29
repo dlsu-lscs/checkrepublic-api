@@ -107,6 +107,7 @@ Table documents {
   mime_type varchar(128) [not null, note: 'Validated PDF/DOCX/XLSX MIME type']
   size_bytes bigint [not null, note: 'Positive; maximum 25 MB per file']
   storage_key text [not null, unique, note: 'Private Garage object key']
+  uploaded_at timestamptz [not null, default: `now()`, note: 'Database timestamp when the document record was created']
   is_deleted boolean [not null, default: false, note: 'Removed/replaced attachment; retain historical object']
 
   indexes {
