@@ -22,6 +22,7 @@ export const envSchema = z.object({
       (value) => /^postgres(?:ql)?:\/\//i.test(value),
       'DATABASE_URL must be a PostgreSQL connection URL',
     ),
+  GOOGLE_CLIENT_ID: z.string().min(1)
 });
 
 export type Env = z.infer<typeof envSchema>;
