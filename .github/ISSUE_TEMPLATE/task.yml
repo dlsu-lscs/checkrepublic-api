@@ -19,13 +19,13 @@ body:
       description: Steps or sub-tasks.
       placeholder: |
         - [ ] 
-        - [ ] 
+        - [ ]
   - type: textarea
     id: acceptance
     attributes:
       label: Acceptance Criteria
       description: How we know this is done.
       placeholder: |
-        - [ ] 
+        - [ ]
     validations:
       required: true
