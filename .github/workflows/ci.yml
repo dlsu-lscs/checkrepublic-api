@@ -1,18 +1,17 @@
-# CI for checkrepublic-api (#23). Runs the gitleaks secret scan over the whole git history.
-# Install, lint, build and test are written out but stay commented out, as the ticket asks:
-# uncomment them (with the cache line) to turn them on.
+# CI for checkrepublic-api (#23): the gitleaks secret scan, then install, lint, build and test.
+# Runs on pushes and pull requests to main and development, and by hand (Actions → CI → Run workflow).
 name: CI
 
 on:
   workflow_dispatch:
-  # Manual runs only for now. Uncomment to also run on pushes and pull requests.
-  # push:
-  #   branches: [main, development]
-  # pull_request:
-  #   branches: [main, development]
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
 
 permissions:
   contents: read
+  pull-requests: read # gitleaks-action lists a pull request's commits to scan them
 
 jobs:
   ci:
@@ -38,16 +37,16 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          # cache: npm
+          cache: npm
 
-      # - name: Install
-      #   run: npm ci
+      - name: Install
+        run: npm ci
 
-      # - name: Lint
-      #   run: npm run lint
+      - name: Lint
+        run: npm run lint
 
-      # - name: Build
-      #   run: npm run build
+      - name: Build
+        run: npm run build
 
-      # - name: Test
-      #   run: npm test
+      - name: Test
+        run: npm test
